@@ -8047,20 +8047,27 @@ class GatewayRunner:
         """Handle /help command - list available commands."""
         from hermes_cli.commands import gateway_help_lines
         lines = [
-            "📖 **Hermes Commands**\n",
+            f"📖 **{t('commands.help.title', default='Hermes Commands')}**\n",
             *gateway_help_lines(),
         ]
         try:
             from agent.skill_commands import get_skill_commands
             skill_cmds = get_skill_commands()
             if skill_cmds:
-                lines.append(f"\n⚡ **Skill Commands** ({len(skill_cmds)} active):")
+                lines.append(f"\n⚡ **{t('commands.help.skills_title', default='Skill Commands')}** ({len(skill_cmds)}):")
                 # Show first 10, then point to /commands for the rest
                 sorted_cmds = sorted(skill_cmds)
                 for cmd in sorted_cmds[:10]:
                     lines.append(f"`{cmd}` — {skill_cmds[cmd]['description']}")
                 if len(sorted_cmds) > 10:
-                    lines.append(f"\n... and {len(sorted_cmds) - 10} more. Use `/commands` for the full paginated list.")
+                    lines.append(
+                        "\n"
+                        + t(
+                            "gateway.skill_commands_more",
+                            default="… and {count} more. Use `/commands` for the full paginated list.",
+                            count=len(sorted_cmds) - 10,
+                        )
+                    )
         except Exception:
             pass
         return _telegramize_command_mentions(
@@ -8077,7 +8084,7 @@ class GatewayRunner:
             try:
                 requested_page = int(raw_args)
             except ValueError:
-                return "Usage: `/commands [page]`"
+                return t("gateway.commands_usage", default="Usage: `/commands [page]`")
         else:
             requested_page = 1
 
@@ -8088,15 +8095,18 @@ class GatewayRunner:
             skill_cmds = get_skill_commands()
             if skill_cmds:
                 entries.append("")
-                entries.append("⚡ **Skill Commands**:")
+                entries.append(f"⚡ **{t('commands.help.skills_title', default='Skill Commands')}**:")
                 for cmd in sorted(skill_cmds):
-                    desc = skill_cmds[cmd].get("description", "").strip() or "Skill command"
+                    desc = skill_cmds[cmd].get("description", "").strip() or t(
+                        "gateway.skill_command",
+                        default="Skill command",
+                    )
                     entries.append(f"`{cmd}` — {desc}")
         except Exception:
             pass
 
         if not entries:
-            return "No commands available."
+            return t("gateway.no_commands_available", default="No commands available.")
 
         from gateway.config import Platform
         page_size = 15 if event.source.platform == Platform.TELEGRAM else 20
@@ -8106,19 +8116,31 @@ class GatewayRunner:
         page_entries = entries[start:start + page_size]
 
         lines = [
-            f"📚 **Commands** ({len(entries)} total, page {page}/{total_pages})",
+            f"📚 **{t('gateway.commands_title', default='Commands')}** "
+            f"{t('gateway.commands_page_header', default='({count} total, page {page}/{total_pages})', count=len(entries), page=page, total_pages=total_pages)}",
             "",
             *page_entries,
         ]
         if total_pages > 1:
             nav_parts = []
             if page > 1:
-                nav_parts.append(f"`/commands {page - 1}` ← prev")
+                nav_parts.append(
+                    f"`/commands {page - 1}` ← {t('gateway.prev_page', default='prev')}"
+                )
             if page < total_pages:
-                nav_parts.append(f"next → `/commands {page + 1}`")
+                nav_parts.append(
+                    f"{t('gateway.next_page', default='next')} → `/commands {page + 1}`"
+                )
             lines.extend(["", " | ".join(nav_parts)])
         if page != requested_page:
-            lines.append(f"_(Requested page {requested_page} was out of range, showing page {page}.)_")
+            lines.append(
+                t(
+                    "gateway.commands_page_oob",
+                    default="(Requested page {requested_page} was out of range, showing page {page}.)",
+                    requested_page=requested_page,
+                    page=page,
+                )
+            )
         return _telegramize_command_mentions(
             "\n".join(lines),
             getattr(getattr(event, "source", None), "platform", None),

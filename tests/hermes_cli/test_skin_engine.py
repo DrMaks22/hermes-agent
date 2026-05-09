@@ -260,11 +260,52 @@ class TestCliBrandingHelpers:
         set_active_skin("ares")
         assert get_active_help_header() == "(⚔) Available Commands"
 
+    def test_active_help_header_builtin_skin_uses_russian_locale(self, monkeypatch):
+        from hermes_cli.skin_engine import set_active_skin, get_active_help_header
+
+        monkeypatch.setenv("HERMES_LANGUAGE", "ru")
+        set_active_skin("default")
+        assert get_active_help_header() == "(^_^)? Доступные команды"
+
+    def test_active_welcome_text_builtin_skin_uses_russian_locale(self, monkeypatch):
+        from hermes_cli.skin_engine import set_active_skin, get_active_welcome_text
+
+        monkeypatch.setenv("HERMES_LANGUAGE", "ru")
+        set_active_skin("default")
+        assert "Добро пожаловать в Hermes Agent!" in get_active_welcome_text()
+
     def test_active_goodbye_ares(self):
         from hermes_cli.skin_engine import set_active_skin, get_active_goodbye
 
         set_active_skin("ares")
         assert get_active_goodbye() == "Farewell, warrior! ⚔"
+
+    def test_user_skin_preserves_custom_branding(self, tmp_path, monkeypatch):
+        from hermes_cli.skin_engine import load_skin
+
+        skins_dir = tmp_path / "skins"
+        skins_dir.mkdir()
+        import yaml
+
+        (skins_dir / "custom.yaml").write_text(yaml.dump({
+            "name": "custom",
+            "branding": {
+                "welcome": "Custom welcome",
+                "help_header": "Custom help",
+                "goodbye": "Custom goodbye",
+            },
+        }), encoding="utf-8")
+        monkeypatch.setattr("hermes_cli.skin_engine._skins_dir", lambda: skins_dir)
+        monkeypatch.setenv("HERMES_LANGUAGE", "ru")
+
+        skin = load_skin("custom")
+        assert skin.source == "user"
+
+        from hermes_cli.skin_engine import set_active_skin, get_active_welcome_text, get_active_help_header, get_active_goodbye
+        set_active_skin("custom")
+        assert get_active_welcome_text() == "Custom welcome"
+        assert get_active_help_header() == "Custom help"
+        assert get_active_goodbye() == "Custom goodbye"
 
     def test_prompt_toolkit_style_overrides_cover_tui_classes(self):
         from hermes_cli.skin_engine import set_active_skin, get_prompt_toolkit_style_overrides

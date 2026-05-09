@@ -117,6 +117,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+from agent.i18n import get_language, t
 from hermes_constants import get_hermes_home
 
 logger = logging.getLogger(__name__)
@@ -138,6 +139,7 @@ class SkinConfig:
     tool_emojis: Dict[str, str] = field(default_factory=dict)  # per-tool emoji overrides
     banner_logo: str = ""    # Rich-markup ASCII art logo (replaces HERMES_AGENT_LOGO)
     banner_hero: str = ""    # Rich-markup hero art (replaces HERMES_CADUCEUS)
+    source: str = "builtin"   # "builtin" or "user"
 
     def get_color(self, key: str, fallback: str = "") -> str:
         """Get a color value with fallback."""
@@ -666,7 +668,7 @@ def _load_skin_from_yaml(path: Path) -> Optional[Dict[str, Any]]:
     return None
 
 
-def _build_skin_config(data: Dict[str, Any]) -> SkinConfig:
+def _build_skin_config(data: Dict[str, Any], *, source: str = "builtin") -> SkinConfig:
     """Build a SkinConfig from a raw dict (built-in or loaded from YAML)."""
     # Start with default values as base for missing keys
     default = _BUILTIN_SKINS["default"]
@@ -687,6 +689,7 @@ def _build_skin_config(data: Dict[str, Any]) -> SkinConfig:
         tool_emojis=data.get("tool_emojis", {}),
         banner_logo=data.get("banner_logo", ""),
         banner_hero=data.get("banner_hero", ""),
+        source=source,
     )
 
 
@@ -729,15 +732,15 @@ def load_skin(name: str) -> SkinConfig:
     if user_file.is_file():
         data = _load_skin_from_yaml(user_file)
         if data:
-            return _build_skin_config(data)
+            return _build_skin_config(data, source="user")
 
     # Check built-in skins
     if name in _BUILTIN_SKINS:
-        return _build_skin_config(_BUILTIN_SKINS[name])
+        return _build_skin_config(_BUILTIN_SKINS[name], source="builtin")
 
     # Fallback to default
     logger.warning("Skin '%s' not found, using default", name)
-    return _build_skin_config(_BUILTIN_SKINS["default"])
+    return _build_skin_config(_BUILTIN_SKINS["default"], source="builtin")
 
 
 def get_active_skin() -> SkinConfig:
@@ -759,6 +762,24 @@ def set_active_skin(name: str) -> SkinConfig:
 def get_active_skin_name() -> str:
     """Get the name of the currently active skin."""
     return _active_skin_name
+
+
+def _localized_branding(key: str, translation_key: str, fallback: str) -> str:
+    """Return localized built-in branding while preserving user skin custom text."""
+    try:
+        skin = get_active_skin()
+    except Exception:
+        skin = None
+
+    if skin and getattr(skin, "name", "default") != "default":
+        try:
+            branded = skin.get_branding(key, "")
+        except Exception:
+            branded = ""
+        if branded:
+            return branded
+
+    return t(translation_key, default=fallback, language=get_language())
 
 
 def init_skin_from_config(config: dict) -> None:
@@ -801,19 +822,20 @@ def get_active_prompt_symbol(fallback: str = "❯") -> str:
 
 def get_active_help_header(fallback: str = "(^_^)? Available Commands") -> str:
     """Get the /help header from the active skin."""
-    try:
-        return get_active_skin().get_branding("help_header", fallback)
-    except Exception:
-        return fallback
+    return _localized_branding("help_header", "banner.help_header", fallback)
+
+
+def get_active_welcome_text(
+    fallback: str = "Welcome to Hermes Agent! Type your message or /help for commands.",
+) -> str:
+    """Get the CLI welcome line from the active skin."""
+    return _localized_branding("welcome", "banner.welcome", fallback)
 
 
 
 def get_active_goodbye(fallback: str = "Goodbye! ⚕") -> str:
     """Get the goodbye line from the active skin."""
-    try:
-        return get_active_skin().get_branding("goodbye", fallback)
-    except Exception:
-        return fallback
+    return _localized_branding("goodbye", "banner.goodbye", fallback)
 
 
 
