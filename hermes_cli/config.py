@@ -105,6 +105,7 @@ _EXTRA_ENV_KEYS = frozenset({
 })
 import yaml
 
+from agent.i18n import get_language, pluralize, t
 from hermes_cli.colors import Colors, color
 from hermes_cli.default_soul import DEFAULT_SOUL_MD
 
@@ -3174,7 +3175,7 @@ def migrate_config(interactive: bool = True, quiet: bool = False) -> Dict[str, A
     try:
         fixes = sanitize_env_file()
         if fixes and not quiet:
-            print(f"  ✓ Repaired .env file ({fixes} corrupted entries fixed)")
+            print(_config_t("repaired_env_file", "  ✓ Repaired .env file ({fixes} corrupted entries fixed)", fixes=fixes))
     except Exception:
         pass  # best-effort; don't block migration on sanitize failure
 
@@ -3202,7 +3203,7 @@ def migrate_config(interactive: bool = True, quiet: bool = False) -> Dict[str, A
             config["display"] = display
             save_config(config)
             if not quiet:
-                print(f"  ✓ Migrated tool progress to config.yaml: {display['tool_progress']}")
+                print(_config_t("migrate_tool_progress", "  ✓ Migrated tool progress to config.yaml: {value}", value=display["tool_progress"]))
     
     # ── Version 4 → 5: add timezone field ──
     if current_ver < 5:
@@ -3218,7 +3219,7 @@ def migrate_config(interactive: bool = True, quiet: bool = False) -> Dict[str, A
             save_config(config)
             if not quiet:
                 tz_display = config["timezone"] or "(server-local)"
-                print(f"  ✓ Added timezone to config.yaml: {tz_display}")
+                print(_config_t("added_timezone", "  ✓ Added timezone to config.yaml: {tz_display}", tz_display=tz_display))
 
     # ── Version 8 → 9: clear ANTHROPIC_TOKEN from .env ──
     # The new Anthropic auth flow no longer uses this env var.
@@ -3228,7 +3229,7 @@ def migrate_config(interactive: bool = True, quiet: bool = False) -> Dict[str, A
             if old_token:
                 save_env_value("ANTHROPIC_TOKEN", "")
                 if not quiet:
-                    print("  ✓ Cleared ANTHROPIC_TOKEN from .env (no longer used)")
+                    print(_config_t("cleared_anthropic_token", "  ✓ Cleared ANTHROPIC_TOKEN from .env (no longer used)"))
         except Exception:
             pass
 
@@ -3290,10 +3291,10 @@ def migrate_config(interactive: bool = True, quiet: bool = False) -> Dict[str, A
                 config.pop("custom_providers", None)
                 save_config(config)
                 if not quiet:
-                    print(f"  ✓ Migrated {migrated_count} custom provider(s) to providers: section")
+                    print(_config_t("migrate_custom_providers", "  ✓ Migrated {count} custom provider(s) to providers: section", count=migrated_count))
                     for key in list(providers_dict.keys())[-migrated_count:]:
                         ep = providers_dict[key]
-                        print(f"    → {key}: {ep.get('api', '')}")
+                        print(_config_t("migrate_custom_provider_detail", "    → {key}: {api}", key=key, api=ep.get("api", "")))
 
     # ── Version 12 → 13: clear dead LLM_MODEL / OPENAI_MODEL from .env ──
     # These env vars were written by the old setup wizard but nothing reads
@@ -3306,7 +3307,7 @@ def migrate_config(interactive: bool = True, quiet: bool = False) -> Dict[str, A
                 if old_val:
                     save_env_value(dead_var, "")
                     if not quiet:
-                        print(f"  ✓ Cleared {dead_var} from .env (no longer used — config.yaml is source of truth)")
+                        print(_config_t("migrate_dead_env", "  ✓ Cleared {name} from .env (no longer used — config.yaml is source of truth)", name=dead_var))
             except Exception:
                 pass
 
@@ -3358,7 +3359,7 @@ def migrate_config(interactive: bool = True, quiet: bool = False) -> Dict[str, A
             config["stt"] = stt
             save_config(config)
             if not quiet:
-                print(f"  ✓ Migrated legacy stt.model to provider-specific config")
+                print(_config_t("migrate_stt_model", "  ✓ Migrated legacy stt.model to provider-specific config"))
 
     # ── Version 14 → 15: add explicit gateway interim-message gate ──
     if current_ver < 15:
@@ -3372,7 +3373,7 @@ def migrate_config(interactive: bool = True, quiet: bool = False) -> Dict[str, A
             results["config_added"].append("display.interim_assistant_messages=true (default)")
             save_config(config)
             if not quiet:
-                print("  ✓ Added display.interim_assistant_messages=true")
+                print(_config_t("added_interim_assistant_messages", "  ✓ Added display.interim_assistant_messages=true"))
 
     # ── Version 15 → 16: migrate tool_progress_overrides into display.platforms ──
     if current_ver < 16:
@@ -3395,7 +3396,7 @@ def migrate_config(interactive: bool = True, quiet: bool = False) -> Dict[str, A
             save_config(config)
             if not quiet:
                 migrated = ", ".join(f"{p}={m}" for p, m in old_overrides.items())
-                print(f"  ✓ Migrated tool_progress_overrides → display.platforms: {migrated}")
+                print(_config_t("migrate_tool_progress_overrides", "  ✓ Migrated tool_progress_overrides → display.platforms: {migrated}", migrated=migrated))
             results["config_added"].append("display.platforms (migrated from tool_progress_overrides)")
 
     # ── Version 16 → 17: remove legacy compression.summary_* keys ──
@@ -3431,9 +3432,9 @@ def migrate_config(interactive: bool = True, quiet: bool = False) -> Dict[str, A
                 save_config(config)
                 if not quiet:
                     if migrated_keys:
-                        print(f"  ✓ Migrated compression.summary_* → auxiliary.compression: {', '.join(migrated_keys)}")
+                        print(_config_t("migrate_compression_summary", "  ✓ Migrated compression.summary_* → auxiliary.compression: {keys}", keys=", ".join(migrated_keys)))
                     else:
-                        print("  ✓ Removed unused compression.summary_* keys")
+                        print(_config_t("remove_unused_compression", "  ✓ Removed unused compression.summary_* keys"))
 
     # ── Version 20 → 21: plugins are now opt-in; grandfather existing user plugins ──
     # The loader now requires plugins to appear in ``plugins.enabled`` before
@@ -3491,13 +3492,18 @@ def migrate_config(interactive: bool = True, quiet: bool = False) -> Dict[str, A
             if not quiet:
                 if grandfathered:
                     print(
-                        f"  ✓ Plugins now opt-in: grandfathered "
-                        f"{len(grandfathered)} existing plugin(s) into plugins.enabled"
+                        _config_t(
+                            "plugins_now_opt_in_grandfathered",
+                            "  ✓ Plugins now opt-in: grandfathered {count} existing plugin(s) into plugins.enabled",
+                            count=len(grandfathered),
+                        )
                     )
                 else:
                     print(
-                        "  ✓ Plugins now opt-in: no existing plugins to grandfather. "
-                        "Use `hermes plugins enable <name>` to activate."
+                        _config_t(
+                            "plugins_now_opt_in_none",
+                            "  ✓ Plugins now opt-in: no existing plugins to grandfather. Use `hermes plugins enable <name>` to activate.",
+                        )
                     )
 
     # ── Version 22 → 23: seed curator defaults + create logs/curator/ ──
@@ -3524,7 +3530,9 @@ def migrate_config(interactive: bool = True, quiet: bool = False) -> Dict[str, A
             curator_dir = get_hermes_home() / "logs" / "curator"
             curator_dir.mkdir(parents=True, exist_ok=True)
         except Exception as e:
-            results["warnings"].append(f"Could not create {curator_dir}: {e}")
+            results["warnings"].append(
+                _config_t("could_not_create_curator_dir", "Could not create {path}: {e}", path=curator_dir, e=e)
+            )
 
         config = read_raw_config()
         touched = False
@@ -3571,8 +3579,11 @@ def migrate_config(interactive: bool = True, quiet: bool = False) -> Dict[str, A
                 )
                 if not quiet:
                     print(
-                        "  ✓ Seeded curator defaults in config.yaml: "
-                        f"{', '.join(added_curator)}"
+                        _config_t(
+                            "seeded_curator_defaults",
+                            "  ✓ Seeded curator defaults in config.yaml: {keys}",
+                            keys=", ".join(added_curator),
+                        )
                     )
             if added_aux:
                 results["config_added"].append(
@@ -3580,39 +3591,42 @@ def migrate_config(interactive: bool = True, quiet: bool = False) -> Dict[str, A
                 )
                 if not quiet:
                     print(
-                        "  ✓ Seeded auxiliary.curator defaults in config.yaml: "
-                        f"{', '.join(added_aux)}"
+                        _config_t(
+                            "seeded_aux_curator_defaults",
+                            "  ✓ Seeded auxiliary.curator defaults in config.yaml: {keys}",
+                            keys=", ".join(added_aux),
+                        )
                     )
 
     if current_ver < latest_ver and not quiet:
-        print(f"Config version: {current_ver} → {latest_ver}")
+        print(_config_t("config_version_range", "  Config version: {current} → {latest}", current=current_ver, latest=latest_ver))
     
     # Check for missing required env vars
     missing_env = get_missing_env_vars(required_only=True)
     
     if missing_env and not quiet:
-        print("\n⚠️  Missing required environment variables:")
+        print(_config_t("missing_required_env", "\n⚠️  Missing required environment variables:"))
         for var in missing_env:
             print(f"   • {var['name']}: {var['description']}")
     
     if interactive and missing_env:
-        print("\nLet's configure them now:\n")
+        print(_config_t("configure_now", "\nLet's configure them now:\n"))
         for var in missing_env:
             if var.get("url"):
-                print(f"  Get your key at: {var['url']}")
+                print(_config_t("get_key_at", "  Get your key at: {url}", url=var["url"]))
             
             if var.get("password"):
                 import getpass
-                value = getpass.getpass(f"  {var['prompt']}: ")
+                value = getpass.getpass(_config_t("prompt_secret", "  {prompt}: ", prompt=var["prompt"]))
             else:
-                value = input(f"  {var['prompt']}: ").strip()
+                value = input(_config_t("prompt_value", "  {prompt}: ", prompt=var["prompt"])).strip()
             
             if value:
                 save_env_value(var["name"], value)
                 results["env_added"].append(var["name"])
-                print(f"  ✓ Saved {var['name']}")
+                print(_config_t("saved_var", "  ✓ Saved {name}", name=var["name"]))
             else:
-                results["warnings"].append(f"Skipped {var['name']} - some features may not work")
+                results["warnings"].append(_config_t("skipped_var", "Skipped {name} - some features may not work", name=var["name"]))
             print()
     
     # Check for missing optional env vars and offer to configure interactively
@@ -3636,12 +3650,12 @@ def migrate_config(interactive: bool = True, quiet: bool = False) -> Dict[str, A
             if not get_env_value(name) and name in OPTIONAL_ENV_VARS
         ]
         if new_and_unset:
-            print(f"\n  {len(new_and_unset)} new optional key(s) in this update:")
+            print(_config_t("new_optional_keys", "\n  {count} new optional key(s) in this update:", count=len(new_and_unset)))
             for name, info in new_and_unset:
                 print(f"    • {name} — {info.get('description', '')}")
             print()
             try:
-                answer = input("  Configure new keys? [y/N]: ").strip().lower()
+                answer = input(_config_t("configure_new_keys", "  Configure new keys? [y/N]: ")).strip().lower()
             except (EOFError, KeyboardInterrupt):
                 answer = "n"
 
@@ -3650,21 +3664,21 @@ def migrate_config(interactive: bool = True, quiet: bool = False) -> Dict[str, A
                 for name, info in new_and_unset:
                     if info.get("url"):
                         print(f"  {info.get('description', name)}")
-                        print(f"  Get your key at: {info['url']}")
+                        print(_config_t("get_key_at", "  Get your key at: {url}", url=info["url"]))
                     else:
                         print(f"  {info.get('description', name)}")
                     if info.get("password"):
                         import getpass
-                        value = getpass.getpass(f"  {info.get('prompt', name)} (Enter to skip): ")
+                        value = getpass.getpass(_config_t("prompt_password_skip", "  {prompt} (Enter to skip): ", prompt=info.get('prompt', name)))
                     else:
-                        value = input(f"  {info.get('prompt', name)} (Enter to skip): ").strip()
+                        value = input(_config_t("prompt_skip", "  {prompt} (Enter to skip): ", prompt=info.get('prompt', name))).strip()
                     if value:
                         save_env_value(name, value)
                         results["env_added"].append(name)
-                        print(f"  ✓ Saved {name}")
+                        print(_config_t("saved_var", "  ✓ Saved {name}", name=name))
                     print()
             else:
-                print("  Set later with: hermes config set <key> <value>")
+                print(_config_t("set_later", "  Set later with: hermes config set <key> <value>"))
     
     # Check for missing config fields
     missing_config = get_missing_config_fields()
@@ -3679,7 +3693,7 @@ def migrate_config(interactive: bool = True, quiet: bool = False) -> Dict[str, A
             _set_nested(config, key, default)
             results["config_added"].append(key)
             if not quiet:
-                print(f"  ✓ Added {key} = {default}")
+                print(_config_t("added_config_value", "  ✓ Added {key} = {default}", key=key, default=default))
         
         # Update version and save
         config["_config_version"] = latest_ver
@@ -3696,13 +3710,13 @@ def migrate_config(interactive: bool = True, quiet: bool = False) -> Dict[str, A
     # Prompt for any that are missing/empty.
     missing_skill_config = get_missing_skill_config_vars()
     if missing_skill_config and interactive and not quiet:
-        print(f"\n  {len(missing_skill_config)} skill setting(s) not configured:")
+        print(_config_t("skill_settings_not_configured", "\n  {count} skill setting(s) not configured:", count=len(missing_skill_config)))
         for var in missing_skill_config:
             skill_name = var.get("skill", "unknown")
             print(f"    • {var['key']} — {var['description']} (from skill: {skill_name})")
         print()
         try:
-            answer = input("  Configure skill settings? [y/N]: ").strip().lower()
+            answer = input(_config_t("configure_skill_settings", "  Configure skill settings? [y/N]: ")).strip().lower()
         except (EOFError, KeyboardInterrupt):
             answer = "n"
 
@@ -3716,22 +3730,22 @@ def migrate_config(interactive: bool = True, quiet: bool = False) -> Dict[str, A
             for var in missing_skill_config:
                 default = var.get("default", "")
                 default_hint = f" (default: {default})" if default else ""
-                value = input(f"  {var['prompt']}{default_hint}: ").strip()
+                value = input(_config_t("prompt_with_default", "  {prompt}{default_hint}: ", prompt=var["prompt"], default_hint=default_hint)).strip()
                 if not value and default:
                     value = str(default)
                 if value:
                     storage_key = f"{SKILL_CONFIG_PREFIX}.{var['key']}"
                     _set_nested(config, storage_key, value)
                     results["config_added"].append(var["key"])
-                    print(f"  ✓ Saved {var['key']} = {value}")
+                    print(_config_t("saved_skill_value", "  ✓ Saved {key} = {value}", key=var["key"], value=value))
                 else:
                     results["warnings"].append(
-                        f"Skipped {var['key']} — skill '{var.get('skill', '?')}' may ask for it later"
+                        _config_t("skipped_skill_value", "Skipped {key} — skill '{skill}' may ask for it later", key=var["key"], skill=var.get("skill", "?"))
                     )
                 print()
             save_config(config)
         else:
-            print("  Set later with: hermes config set <key> <value>")
+            print(_config_t("set_later", "  Set later with: hermes config set <key> <value>"))
 
     return results
 
@@ -4026,7 +4040,7 @@ def load_config() -> Dict[str, Any]:
 
                 config = _deep_merge(config, user_config)
             except Exception as e:
-                print(f"Warning: Failed to load config: {e}")
+                print(_config_t("load_config_warning", "Warning: Failed to load config: {e}", e=e))
 
         normalized = _normalize_root_model_keys(_normalize_max_turns_config(config))
         expanded = _expand_env_vars(normalized)
@@ -4533,28 +4547,46 @@ def redact_key(key: str) -> str:
     "(not set)" placeholder in dim color for the empty case.
     """
     from agent.redact import mask_secret
-    return mask_secret(key, empty=color("(not set)", Colors.DIM))
+    return mask_secret(
+        key,
+        empty=color(t("common.not_set", default="(not set)", language=get_language()), Colors.DIM),
+    )
+
+
+def _config_t(key: str, default: str, **kwargs) -> str:
+    """Translate config output while keeping commands / technical tokens in English."""
+    return t(f"config.{key}", default=default, language=get_language(), **kwargs)
+
+
+def _common_t(key: str, default: str, **kwargs) -> str:
+    """Translate common display labels."""
+    return t(f"common.{key}", default=default, language=get_language(), **kwargs)
 
 
 def show_config():
     """Display current configuration."""
     config = load_config()
-    
+
+    title = _config_t("title", "Hermes Configuration")
+    box_top = "┌─────────────────────────────────────────────────────────┐"
+    box_bottom = "└─────────────────────────────────────────────────────────┘"
+    box_width = len(box_top) - 2
+
     print()
-    print(color("┌─────────────────────────────────────────────────────────┐", Colors.CYAN))
-    print(color("│              ⚕ Hermes Configuration                    │", Colors.CYAN))
-    print(color("└─────────────────────────────────────────────────────────┘", Colors.CYAN))
-    
+    print(color(box_top, Colors.CYAN))
+    print(color(f"│{f'⚕ {title}'.center(box_width)}│", Colors.CYAN))
+    print(color(box_bottom, Colors.CYAN))
+
     # Paths
     print()
-    print(color("◆ Paths", Colors.CYAN, Colors.BOLD))
-    print(f"  Config:       {get_config_path()}")
-    print(f"  Secrets:      {get_env_path()}")
-    print(f"  Install:      {get_project_root()}")
-    
+    print(color(f"◆ {_config_t('sections.paths', 'Paths')}", Colors.CYAN, Colors.BOLD))
+    print(f"  {_config_t('labels.config_path', 'Config'):14s} {get_config_path()}")
+    print(f"  {_config_t('labels.secrets_path', 'Secrets'):14s} {get_env_path()}")
+    print(f"  {_config_t('labels.install_path', 'Install'):14s} {get_project_root()}")
+
     # API Keys
     print()
-    print(color("◆ API Keys", Colors.CYAN, Colors.BOLD))
+    print(color(f"◆ {_config_t('sections.api_keys', 'API Keys')}", Colors.CYAN, Colors.BOLD))
     
     keys = [
         ("OPENROUTER_API_KEY", "OpenRouter"),
@@ -4577,82 +4609,92 @@ def show_config():
     
     # Model settings
     print()
-    print(color("◆ Model", Colors.CYAN, Colors.BOLD))
-    print(f"  Model:        {config.get('model', 'not set')}")
-    print(f"  Max turns:    {config.get('agent', {}).get('max_turns', DEFAULT_CONFIG['agent']['max_turns'])}")
-    
+    print(color(f"◆ {_config_t('sections.model', 'Model')}", Colors.CYAN, Colors.BOLD))
+    print(f"  {_config_t('labels.model', 'Model'):14s} {config.get('model', _common_t('not_set', '(not set)'))}")
+    print(f"  {_config_t('labels.max_turns', 'Max turns'):14s} {config.get('agent', {}).get('max_turns', DEFAULT_CONFIG['agent']['max_turns'])}")
+
     # Display
     print()
-    print(color("◆ Display", Colors.CYAN, Colors.BOLD))
+    print(color(f"◆ {_config_t('sections.display', 'Display')}", Colors.CYAN, Colors.BOLD))
     display = config.get('display', {})
-    print(f"  Personality:  {display.get('personality', 'kawaii')}")
-    print(f"  Reasoning:    {'on' if display.get('show_reasoning', False) else 'off'}")
-    print(f"  Bell:         {'on' if display.get('bell_on_complete', False) else 'off'}")
+    print(f"  {_config_t('labels.personality', 'Personality'):14s} {display.get('personality', 'kawaii')}")
+    print(f"  {_config_t('labels.reasoning', 'Reasoning'):14s} {color(t('status.labels.enabled', default='on', language=get_language()) if display.get('show_reasoning', False) else t('status.labels.disabled', default='off', language=get_language()), Colors.GREEN if display.get('show_reasoning', False) else Colors.DIM)}")
+    print(f"  {_config_t('labels.bell', 'Bell'):14s} {color(t('status.labels.enabled', default='on', language=get_language()) if display.get('bell_on_complete', False) else t('status.labels.disabled', default='off', language=get_language()), Colors.GREEN if display.get('bell_on_complete', False) else Colors.DIM)}")
     ump = display.get('user_message_preview', {}) if isinstance(display.get('user_message_preview', {}), dict) else {}
     ump_first = ump.get('first_lines', 2)
     ump_last = ump.get('last_lines', 2)
-    print(f"  User preview: first {ump_first} line(s), last {ump_last} line(s)")
+    print(
+        f"  {_config_t('labels.user_preview', 'User preview'):14s} "
+        f"{_config_t(
+            'preview_format',
+            'first {first} {first_word}, last {last} {last_word}',
+            first=ump_first,
+            first_word=pluralize(ump_first, 'line', 'lines', 'lines', language=get_language()),
+            last=ump_last,
+            last_word=pluralize(ump_last, 'line', 'lines', 'lines', language=get_language()),
+        )}"
+    )
 
     # Terminal
     print()
-    print(color("◆ Terminal", Colors.CYAN, Colors.BOLD))
+    print(color(f"◆ {_config_t('sections.terminal', 'Terminal')}", Colors.CYAN, Colors.BOLD))
     terminal = config.get('terminal', {})
-    print(f"  Backend:      {terminal.get('backend', 'local')}")
-    print(f"  Working dir:  {terminal.get('cwd', '.')}")
-    print(f"  Timeout:      {terminal.get('timeout', 60)}s")
+    print(f"  {_config_t('labels.backend', 'Backend'):14s} {terminal.get('backend', 'local')}")
+    print(f"  {_config_t('labels.working_dir', 'Working dir'):14s} {terminal.get('cwd', '.')}")
+    print(f"  {_config_t('labels.timeout', 'Timeout'):14s} {terminal.get('timeout', 60)}s")
     
     if terminal.get('backend') == 'docker':
-        print(f"  Docker image: {terminal.get('docker_image', 'nikolaik/python-nodejs:python3.11-nodejs20')}")
+        print(f"  {_config_t('labels.docker_image', 'Docker image'):14s} {terminal.get('docker_image', 'nikolaik/python-nodejs:python3.11-nodejs20')}")
     elif terminal.get('backend') == 'singularity':
-        print(f"  Image:        {terminal.get('singularity_image', 'docker://nikolaik/python-nodejs:python3.11-nodejs20')}")
+        print(f"  {_config_t('labels.image', 'Image'):14s} {terminal.get('singularity_image', 'docker://nikolaik/python-nodejs:python3.11-nodejs20')}")
     elif terminal.get('backend') == 'modal':
-        print(f"  Modal image:  {terminal.get('modal_image', 'nikolaik/python-nodejs:python3.11-nodejs20')}")
+        print(f"  {_config_t('labels.modal_image', 'Modal image'):14s} {terminal.get('modal_image', 'nikolaik/python-nodejs:python3.11-nodejs20')}")
         modal_token = get_env_value('MODAL_TOKEN_ID')
-        print(f"  Modal token:  {'configured' if modal_token else '(not set)'}")
+        print(f"  {_config_t('labels.modal_token', 'Modal token'):14s} {(_common_t('configured', 'configured') if modal_token else _common_t('not_set', '(not set)'))}")
     elif terminal.get('backend') == 'daytona':
-        print(f"  Daytona image: {terminal.get('daytona_image', 'nikolaik/python-nodejs:python3.11-nodejs20')}")
+        print(f"  {_config_t('labels.daytona_image', 'Daytona image'):14s} {terminal.get('daytona_image', 'nikolaik/python-nodejs:python3.11-nodejs20')}")
         daytona_key = get_env_value('DAYTONA_API_KEY')
-        print(f"  API key:      {'configured' if daytona_key else '(not set)'}")
+        print(f"  {_config_t('labels.api_key', 'API key'):14s} {(_common_t('configured', 'configured') if daytona_key else _common_t('not_set', '(not set)'))}")
     elif terminal.get('backend') == 'vercel_sandbox':
-        print(f"  Vercel runtime: {terminal.get('vercel_runtime', 'node24')}")
-        print(f"  Vercel auth:    {'configured' if get_env_value('VERCEL_OIDC_TOKEN') or (get_env_value('VERCEL_TOKEN') and get_env_value('VERCEL_PROJECT_ID') and get_env_value('VERCEL_TEAM_ID')) else '(not set)'}")
+        print(f"  {_config_t('labels.vercel_runtime', 'Vercel runtime'):14s} {terminal.get('vercel_runtime', 'node24')}")
+        print(f"  {_config_t('labels.vercel_auth', 'Vercel auth'):14s} {(_common_t('configured', 'configured') if get_env_value('VERCEL_OIDC_TOKEN') or (get_env_value('VERCEL_TOKEN') and get_env_value('VERCEL_PROJECT_ID') and get_env_value('VERCEL_TEAM_ID')) else _common_t('not_set', '(not set)'))}")
     elif terminal.get('backend') == 'ssh':
         ssh_host = get_env_value('TERMINAL_SSH_HOST')
         ssh_user = get_env_value('TERMINAL_SSH_USER')
-        print(f"  SSH host:     {ssh_host or '(not set)'}")
-        print(f"  SSH user:     {ssh_user or '(not set)'}")
+        print(f"  {_config_t('labels.ssh_host', 'SSH host'):14s} {ssh_host or _common_t('not_set', '(not set)')}")
+        print(f"  {_config_t('labels.ssh_user', 'SSH user'):14s} {ssh_user or _common_t('not_set', '(not set)')}")
     
     # Timezone
     print()
-    print(color("◆ Timezone", Colors.CYAN, Colors.BOLD))
+    print(color(f"◆ {_config_t('sections.timezone', 'Timezone')}", Colors.CYAN, Colors.BOLD))
     tz = config.get('timezone', '')
     if tz:
-        print(f"  Timezone:     {tz}")
+        print(f"  {_config_t('labels.timezone', 'Timezone'):14s} {tz}")
     else:
-        print(f"  Timezone:     {color('(server-local)', Colors.DIM)}")
+        print(f"  {_config_t('labels.timezone', 'Timezone'):14s} {color(_config_t('server_local_timezone', '(server-local)'), Colors.DIM)}")
 
     # Compression
     print()
-    print(color("◆ Context Compression", Colors.CYAN, Colors.BOLD))
+    print(color(f"◆ {_config_t('sections.compression', 'Context Compression')}", Colors.CYAN, Colors.BOLD))
     compression = config.get('compression', {})
     enabled = compression.get('enabled', True)
-    print(f"  Enabled:      {'yes' if enabled else 'no'}")
+    print(f"  {_config_t('labels.enabled', 'Enabled'):14s} {(_common_t('yes', 'yes') if enabled else _common_t('no', 'no'))}")
     if enabled:
-        print(f"  Threshold:    {compression.get('threshold', 0.50) * 100:.0f}%")
-        print(f"  Target ratio: {compression.get('target_ratio', 0.20) * 100:.0f}% of threshold preserved")
-        print(f"  Protect last: {compression.get('protect_last_n', 20)} messages")
+        print(f"  {_config_t('labels.threshold', 'Threshold'):14s} {compression.get('threshold', 0.50) * 100:.0f}%")
+        print(f"  {_config_t('labels.target_ratio', 'Target ratio'):14s} {compression.get('target_ratio', 0.20) * 100:.0f}% {_config_t('target_ratio_suffix', 'of threshold preserved')}")
+        print(f"  {_config_t('labels.protect_last', 'Protect last'):14s} {compression.get('protect_last_n', 20)} {_config_t('messages_suffix', 'messages')}")
         _aux_comp = config.get('auxiliary', {}).get('compression', {})
         _sm = _aux_comp.get('model', '') or '(auto)'
-        print(f"  Model:        {_sm}")
+        print(f"  {_config_t('labels.model', 'Model'):14s} {_sm}")
         comp_provider = _aux_comp.get('provider', 'auto')
         if comp_provider and comp_provider != 'auto':
-            print(f"  Provider:     {comp_provider}")
+            print(f"  {_config_t('labels.provider', 'Provider'):14s} {comp_provider}")
     
     # Auxiliary models
     auxiliary = config.get('auxiliary', {})
     aux_tasks = {
-        "Vision":      auxiliary.get('vision', {}),
-        "Web extract": auxiliary.get('web_extract', {}),
+        _config_t('labels.aux_vision', 'Vision'):      auxiliary.get('vision', {}),
+        _config_t('labels.aux_web_extract', 'Web extract'): auxiliary.get('web_extract', {}),
     }
     has_overrides = any(
         t.get('provider', 'auto') != 'auto' or t.get('model', '')
@@ -4660,7 +4702,7 @@ def show_config():
     )
     if has_overrides:
         print()
-        print(color("◆ Auxiliary Models (overrides)", Colors.CYAN, Colors.BOLD))
+        print(color(f"◆ {_config_t('sections.auxiliary_models', 'Auxiliary Models (overrides)')}", Colors.CYAN, Colors.BOLD))
         for label, task_cfg in aux_tasks.items():
             prov = task_cfg.get('provider', 'auto')
             mdl = task_cfg.get('model', '')
@@ -4672,13 +4714,13 @@ def show_config():
     
     # Messaging
     print()
-    print(color("◆ Messaging Platforms", Colors.CYAN, Colors.BOLD))
+    print(color(f"◆ {_config_t('sections.messaging_platforms', 'Messaging Platforms')}", Colors.CYAN, Colors.BOLD))
     
     telegram_token = get_env_value('TELEGRAM_BOT_TOKEN')
     discord_token = get_env_value('DISCORD_BOT_TOKEN')
     
-    print(f"  Telegram:     {'configured' if telegram_token else color('not configured', Colors.DIM)}")
-    print(f"  Discord:      {'configured' if discord_token else color('not configured', Colors.DIM)}")
+    print(f"  Telegram:     {(_common_t('configured', 'configured') if telegram_token else color(_common_t('not_configured', 'not configured'), Colors.DIM))}")
+    print(f"  Discord:      {(_common_t('configured', 'configured') if discord_token else color(_common_t('not_configured', 'not configured'), Colors.DIM))}")
     
     # Skill config
     try:
@@ -4687,21 +4729,21 @@ def show_config():
         if skill_vars:
             resolved = resolve_skill_config_values(skill_vars)
             print()
-            print(color("◆ Skill Settings", Colors.CYAN, Colors.BOLD))
+            print(color(f"◆ {_config_t('sections.skill_settings', 'Skill Settings')}", Colors.CYAN, Colors.BOLD))
             for var in skill_vars:
                 key = var["key"]
                 value = resolved.get(key, "")
                 skill_name = var.get("skill", "")
-                display_val = str(value) if value else color("(not set)", Colors.DIM)
+                display_val = str(value) if value else color(_common_t('not_set', '(not set)'), Colors.DIM)
                 print(f"  {key:<20s} {display_val}  {color(f'[{skill_name}]', Colors.DIM)}")
     except Exception:
         pass
 
     print()
     print(color("─" * 60, Colors.DIM))
-    print(color("  hermes config edit     # Edit config file", Colors.DIM))
+    print(color(f"  hermes config edit     # {_config_t('footer.edit', 'Edit config file')}", Colors.DIM))
     print(color("  hermes config set <key> <value>", Colors.DIM))
-    print(color("  hermes setup           # Run setup wizard", Colors.DIM))
+    print(color(f"  hermes setup           # {_config_t('footer.setup', 'Run setup wizard')}", Colors.DIM))
     print()
 
 
@@ -4715,7 +4757,7 @@ def edit_config():
     # Ensure config exists
     if not config_path.exists():
         save_config(DEFAULT_CONFIG)
-        print(f"Created {config_path}")
+        print(_config_t("created", f"Created {config_path}", path=config_path))
     
     # Find editor
     editor = os.getenv('EDITOR') or os.getenv('VISUAL')
@@ -4737,11 +4779,11 @@ def edit_config():
                 break
     
     if not editor:
-        print("No editor found. Config file is at:")
+        print(_config_t("no_editor_found", "No editor found. Config file is at:"))
         print(f"  {config_path}")
         return
     
-    print(f"Opening {config_path} in {editor}...")
+    print(_config_t("opening", "Opening {path} in {editor}...", path=config_path, editor=editor))
     subprocess.run([editor, str(config_path)])
 
 
@@ -4766,7 +4808,7 @@ def set_config_value(key: str, value: str):
     
     if key.upper() in api_keys or key.upper().endswith(('_API_KEY', '_TOKEN')) or key.upper().startswith('TERMINAL_SSH'):
         save_env_value(key.upper(), value)
-        print(f"✓ Set {key} in {get_env_path()}")
+        print(_config_t("set_env", "✓ Set {key} in {path}", key=key, path=get_env_path()))
         return
     
     # Otherwise it goes to config.yaml
@@ -4829,7 +4871,7 @@ def set_config_value(key: str, value: str):
     if key in _config_to_env_sync:
         save_env_value(_config_to_env_sync[key], str(value))
 
-    print(f"✓ Set {key} = {value} in {config_path}")
+    print(_config_t("set_config", "✓ Set {key} = {value} in {path}", key=key, value=value, path=config_path))
 
 
 # =============================================================================
@@ -4850,9 +4892,9 @@ def config_command(args):
         key = getattr(args, 'key', None)
         value = getattr(args, 'value', None)
         if not key or value is None:
-            print("Usage: hermes config set <key> <value>")
+            print(_config_t("usage_set", "Usage: hermes config set <key> <value>"))
             print()
-            print("Examples:")
+            print(_config_t("examples", "Examples:"))
             print("  hermes config set model anthropic/claude-sonnet-4")
             print("  hermes config set terminal.backend docker")
             print("  hermes config set OPENROUTER_API_KEY sk-or-...")
@@ -4867,7 +4909,7 @@ def config_command(args):
     
     elif subcmd == "migrate":
         print()
-        print(color("🔄 Checking configuration for updates...", Colors.CYAN, Colors.BOLD))
+        print(color(_config_t("checking_updates", "🔄 Checking configuration for updates..."), Colors.CYAN, Colors.BOLD))
         print()
         
         # Check what's missing
@@ -4876,16 +4918,16 @@ def config_command(args):
         current_ver, latest_ver = check_config_version()
         
         if not missing_env and not missing_config and current_ver >= latest_ver:
-            print(color("✓ Configuration is up to date!", Colors.GREEN))
+            print(color(_config_t("up_to_date", "✓ Configuration is up to date!"), Colors.GREEN))
             print()
             return
         
         # Show what needs to be updated
         if current_ver < latest_ver:
-            print(f"  Config version: {current_ver} → {latest_ver}")
+            print(_config_t("config_version_range", "  Config version: {current} → {latest}", current=current_ver, latest=latest_ver))
         
         if missing_config:
-            print(f"\n  {len(missing_config)} new config option(s) will be added with defaults")
+            print(_config_t("new_options_added", "\n  {count} new config option(s) will be added with defaults", count=len(missing_config)))
         
         required_missing = [v for v in missing_env if v.get("is_required")]
         optional_missing = [
@@ -4894,12 +4936,12 @@ def config_command(args):
         ]
         
         if required_missing:
-            print(f"\n  ⚠️  {len(required_missing)} required API key(s) missing:")
+            print(_config_t("required_missing", "\n  ⚠️  {count} required API key(s) missing:", count=len(required_missing)))
             for var in required_missing:
                 print(f"     • {var['name']}")
         
         if optional_missing:
-            print(f"\n  ℹ️  {len(optional_missing)} optional API key(s) not configured:")
+            print(_config_t("optional_missing", "\n  ℹ️  {count} optional API key(s) not configured:", count=len(optional_missing)))
             for var in optional_missing:
                 tools = var.get("tools", [])
                 tools_str = f" (enables: {', '.join(tools[:2])})" if tools else ""
@@ -4912,7 +4954,7 @@ def config_command(args):
         
         print()
         if results["env_added"] or results["config_added"]:
-            print(color("✓ Configuration updated!", Colors.GREEN))
+            print(color(_config_t("configuration_updated", "✓ Configuration updated!"), Colors.GREEN))
         
         if results["warnings"]:
             print()
@@ -4924,17 +4966,17 @@ def config_command(args):
     elif subcmd == "check":
         # Non-interactive check for what's missing
         print()
-        print(color("📋 Configuration Status", Colors.CYAN, Colors.BOLD))
+        print(color(_config_t("status_title", "📋 Configuration Status"), Colors.CYAN, Colors.BOLD))
         print()
         
         current_ver, latest_ver = check_config_version()
         if current_ver >= latest_ver:
-            print(f"  Config version: {current_ver} ✓")
+            print(_config_t("config_version_current", "  Config version: {current} ✓", current=current_ver))
         else:
-            print(color(f"  Config version: {current_ver} → {latest_ver} (update available)", Colors.YELLOW))
+            print(color(_config_t("config_version_update", "  Config version: {current} → {latest} (update available)", current=current_ver, latest=latest_ver), Colors.YELLOW))
         
         print()
-        print(color("  Required:", Colors.BOLD))
+        print(color(_config_t("required", "  Required:"), Colors.BOLD))
         for var_name in REQUIRED_ENV_VARS:
             if get_env_value(var_name):
                 print(f"    ✓ {var_name}")
@@ -4942,7 +4984,7 @@ def config_command(args):
                 print(color(f"    ✗ {var_name} (missing)", Colors.RED))
         
         print()
-        print(color("  Optional:", Colors.BOLD))
+        print(color(_config_t("optional", "  Optional:"), Colors.BOLD))
         for var_name, info in OPTIONAL_ENV_VARS.items():
             if get_env_value(var_name):
                 print(f"    ✓ {var_name}")
@@ -4954,22 +4996,22 @@ def config_command(args):
         missing_config = get_missing_config_fields()
         if missing_config:
             print()
-            print(color(f"  {len(missing_config)} new config option(s) available", Colors.YELLOW))
-            print("    Run 'hermes config migrate' to add them")
+            print(color(_config_t("new_options_available", "  {count} new config option(s) available", count=len(missing_config)), Colors.YELLOW))
+            print(_config_t("run_migrate", "    Run 'hermes config migrate' to add them"))
         
         print()
     
     else:
-        print(f"Unknown config command: {subcmd}")
+        print(_config_t("unknown_command", "Unknown config command: {subcmd}", subcmd=subcmd))
         print()
-        print("Available commands:")
-        print("  hermes config           Show current configuration")
-        print("  hermes config edit      Open config in editor")
-        print("  hermes config set <key> <value>   Set a config value")
-        print("  hermes config check     Check for missing/outdated config")
-        print("  hermes config migrate   Update config with new options")
-        print("  hermes config path      Show config file path")
-        print("  hermes config env-path  Show .env file path")
+        print(_config_t("available_commands", "Available commands:"))
+        print(_config_t("cmd_show", "  hermes config           Show current configuration"))
+        print(_config_t("cmd_edit", "  hermes config edit      Open config in editor"))
+        print(_config_t("cmd_set", "  hermes config set <key> <value>   Set a config value"))
+        print(_config_t("cmd_check", "  hermes config check     Check for missing/outdated config"))
+        print(_config_t("cmd_migrate", "  hermes config migrate   Update config with new options"))
+        print(_config_t("cmd_path", "  hermes config path      Show config file path"))
+        print(_config_t("cmd_env_path", "  hermes config env-path  Show .env file path"))
         sys.exit(1)
 
 

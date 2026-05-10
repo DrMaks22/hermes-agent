@@ -71,6 +71,13 @@ from pathlib import Path
 from typing import Optional
 
 
+def _main_t(key: str, default: str, **kwargs) -> str:
+    """Translate parser help strings while keeping command tokens English."""
+    from agent.i18n import get_language, t
+
+    return t(key, default=default, language=get_language(), **kwargs)
+
+
 def _add_accept_hooks_flag(parser) -> None:
     """Attach the ``--accept-hooks`` flag.  Shared across every agent
     subparser so the flag works regardless of CLI position."""
@@ -9475,14 +9482,14 @@ def main():
     # =========================================================================
     status_parser = subparsers.add_parser(
         "status",
-        help="Show status of all components",
-        description="Display status of Hermes Agent components",
+        help=_main_t("status.help", "Show status of all components"),
+        description=_main_t("status.description", "Display status of Hermes Agent components"),
     )
     status_parser.add_argument(
-        "--all", action="store_true", help="Show all details (redacted for sharing)"
+        "--all", action="store_true", help=_main_t("status.all", "Show all details (redacted for sharing)")
     )
     status_parser.add_argument(
-        "--deep", action="store_true", help="Run deep checks (may take longer)"
+        "--deep", action="store_true", help=_main_t("status.deep", "Run deep checks (may take longer)")
     )
     status_parser.set_defaults(func=cmd_status)
 
@@ -9933,35 +9940,35 @@ Examples:
     # =========================================================================
     config_parser = subparsers.add_parser(
         "config",
-        help="View and edit configuration",
-        description="Manage Hermes Agent configuration",
+        help=_main_t("config.help", "View and edit configuration"),
+        description=_main_t("config.description", "Manage Hermes Agent configuration"),
     )
     config_subparsers = config_parser.add_subparsers(dest="config_command")
 
     # config show (default)
-    config_subparsers.add_parser("show", help="Show current configuration")
+    config_subparsers.add_parser("show", help=_main_t("config.show", "Show current configuration"))
 
     # config edit
-    config_subparsers.add_parser("edit", help="Open config file in editor")
+    config_subparsers.add_parser("edit", help=_main_t("config.edit", "Open config file in editor"))
 
     # config set
-    config_set = config_subparsers.add_parser("set", help="Set a configuration value")
+    config_set = config_subparsers.add_parser("set", help=_main_t("config.set", "Set a configuration value"))
     config_set.add_argument(
-        "key", nargs="?", help="Configuration key (e.g., model, terminal.backend)"
+        "key", nargs="?", help=_main_t("config.key", "Configuration key (e.g., model, terminal.backend)")
     )
-    config_set.add_argument("value", nargs="?", help="Value to set")
+    config_set.add_argument("value", nargs="?", help=_main_t("config.value", "Value to set"))
 
     # config path
-    config_subparsers.add_parser("path", help="Print config file path")
+    config_subparsers.add_parser("path", help=_main_t("config.path", "Print config file path"))
 
     # config env-path
-    config_subparsers.add_parser("env-path", help="Print .env file path")
+    config_subparsers.add_parser("env-path", help=_main_t("config.env_path", "Print .env file path"))
 
     # config check
-    config_subparsers.add_parser("check", help="Check for missing/outdated config")
+    config_subparsers.add_parser("check", help=_main_t("config.check", "Check for missing/outdated config"))
 
     # config migrate
-    config_subparsers.add_parser("migrate", help="Update config with new options")
+    config_subparsers.add_parser("migrate", help=_main_t("config.migrate", "Update config with new options"))
 
     config_parser.set_defaults(func=cmd_config)
 

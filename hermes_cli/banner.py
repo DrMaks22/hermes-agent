@@ -14,6 +14,7 @@ from pathlib import Path
 from hermes_constants import get_hermes_home
 from typing import Dict, List, Optional
 
+from agent.i18n import get_language, pluralize, t
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
@@ -59,6 +60,11 @@ def _skin_branding(key: str, fallback: str) -> str:
         return get_active_skin().get_branding(key, fallback)
     except Exception:
         return fallback
+
+
+def _banner_t(key: str, default: str, **kwargs) -> str:
+    """Translate banner copy while keeping technical tokens intact."""
+    return t(key, default=default, language=get_language(), **kwargs)
 
 
 # =========================================================================
@@ -453,6 +459,7 @@ def build_welcome_banner(console: Console, model: str, cwd: str,
     dim = _skin_color("banner_dim", "#B8860B")
     text = _skin_color("banner_text", "#FFF8DC")
     session_color = _skin_color("session_border", "#8B8682")
+    language = get_language()
 
     # Use skin's custom caduceus art if provided
     try:
@@ -475,7 +482,7 @@ def build_welcome_banner(console: Console, model: str, cwd: str,
         left_lines.append(f"[dim {session_color}]Session: {session_id}[/]")
     left_content = "\n".join(left_lines)
 
-    right_lines = [f"[bold {accent}]Available Tools[/]"]
+    right_lines = [f"[bold {accent}]{_banner_t('banner.available_tools', 'Available Tools')}[/]"]
     toolsets_dict: Dict[str, list] = {}
 
     for tool in tools:
@@ -532,7 +539,18 @@ def build_welcome_banner(console: Console, model: str, cwd: str,
         right_lines.append(f"[dim {dim}]{toolset}:[/] {tools_str}")
 
     if remaining_toolsets > 0:
-        right_lines.append(f"[dim {dim}](and {remaining_toolsets} more toolsets...)[/]")
+        toolsets_word = pluralize(
+            remaining_toolsets,
+            "toolset",
+            "toolsets",
+            "toolsets",
+            language=language,
+        )
+        right_lines.append(
+            f"[dim {dim}]"
+            f"{_banner_t('banner.more_toolsets', '(and {count} more {toolsets_word}...)', count=remaining_toolsets, toolsets_word=toolsets_word)}"
+            f"[/]"
+        )
 
     # MCP Servers section (only if configured)
     try:
@@ -543,21 +561,28 @@ def build_welcome_banner(console: Console, model: str, cwd: str,
 
     if mcp_status:
         right_lines.append("")
-        right_lines.append(f"[bold {accent}]MCP Servers[/]")
+        right_lines.append(f"[bold {accent}]{_banner_t('banner.mcp_servers', 'MCP Servers')}[/]")
         for srv in mcp_status:
             if srv["connected"]:
+                tools_word = pluralize(
+                    srv["tools"],
+                    "tool",
+                    "tools",
+                    "tools",
+                    language=language,
+                )
                 right_lines.append(
                     f"[dim {dim}]{srv['name']}[/] [{text}]({srv['transport']})[/] "
-                    f"[dim {dim}]—[/] [{text}]{srv['tools']} tool(s)[/]"
+                    f"[dim {dim}]—[/] [{text}]{srv['tools']} {tools_word}[/]"
                 )
             else:
                 right_lines.append(
                     f"[red]{srv['name']}[/] [dim]({srv['transport']})[/] "
-                    f"[red]— failed[/]"
+                    f"{_banner_t('banner.mcp_failed', '[red]— failed[/]')}"
                 )
 
     right_lines.append("")
-    right_lines.append(f"[bold {accent}]Available Skills[/]")
+    right_lines.append(f"[bold {accent}]{_banner_t('banner.available_skills', 'Available Skills')}[/]")
     skills_by_category = get_available_skills()
     total_skills = sum(len(s) for s in skills_by_category.values())
 
@@ -573,20 +598,26 @@ def build_welcome_banner(console: Console, model: str, cwd: str,
                 skills_str = skills_str[:47] + "..."
             right_lines.append(f"[dim {dim}]{category}:[/] [{text}]{skills_str}[/]")
     else:
-        right_lines.append(f"[dim {dim}]No skills installed[/]")
+        right_lines.append(f"[dim {dim}]{_banner_t('banner.no_skills_installed', 'No skills installed')}[/]")
 
     right_lines.append("")
     mcp_connected = sum(1 for s in mcp_status if s["connected"]) if mcp_status else 0
-    summary_parts = [f"{len(tools)} tools", f"{total_skills} skills"]
+    summary_parts = [
+        f"{len(tools)} {pluralize(len(tools), 'tool', 'tools', 'tools', language=language)}",
+        f"{total_skills} {pluralize(total_skills, 'skill', 'skills', 'skills', language=language)}",
+    ]
     if mcp_connected:
-        summary_parts.append(f"{mcp_connected} MCP servers")
-    summary_parts.append("/help for commands")
+        summary_parts.append(
+            f"{mcp_connected} "
+            f"{pluralize(mcp_connected, 'MCP server', 'MCP servers', 'MCP servers', language=language)}"
+        )
+    summary_parts.append(_banner_t("banner.help_hint", "/help — list of commands"))
     # Show active profile name when not 'default'
     try:
         from hermes_cli.profiles import get_active_profile_name
         _profile_name = get_active_profile_name()
         if _profile_name and _profile_name != "default":
-            right_lines.append(f"[bold {accent}]Profile:[/] [{text}]{_profile_name}[/]")
+            right_lines.append(f"[bold {accent}]{_banner_t('banner.profile', 'Profile:')}[/] [{text}]{_profile_name}[/]")
     except Exception:
         pass  # Never break the banner over a profiles.py bug
 
@@ -598,19 +629,25 @@ def build_welcome_banner(console: Console, model: str, cwd: str,
         if behind is not None and behind != 0:
             from hermes_cli.config import get_managed_update_command, recommended_update_command
             if behind > 0:
-                commits_word = "commit" if behind == 1 else "commits"
+                commits_word = pluralize(
+                    behind,
+                    "commit",
+                    "commits",
+                    "commits",
+                    language=language,
+                )
                 right_lines.append(
-                    f"[bold yellow]⚠ {behind} {commits_word} behind[/]"
-                    f"[dim yellow] — run [bold]{recommended_update_command()}[/bold] to update[/]"
+                    f"[bold yellow]{_banner_t('banner.update_behind', '⚠ {count} {commit_word} behind', count=behind, commit_word=commits_word)}[/]"
+                    f"[dim yellow] {_banner_t('banner.run_update', '— run {command} to update', command=f'[bold]{recommended_update_command()}[/bold]')}[/]"
                 )
             else:
                 # UPDATE_AVAILABLE_NO_COUNT: nix-built hermes; we know an update
                 # exists but not by how much, and we don't know how the user
                 # installed it (nix run, profile, system flake, home-manager).
                 managed_cmd = get_managed_update_command()
-                line = "[bold yellow]⚠ update available[/]"
+                line = f"[bold yellow]{_banner_t('banner.update_available', '⚠ update available')}[/]"
                 if managed_cmd:
-                    line += f"[dim yellow] — run [bold]{managed_cmd}[/bold][/]"
+                    line += f"[dim yellow] {_banner_t('banner.run_update', '— run {command} to update', command=f'[bold]{managed_cmd}[/bold]')}[/]"
                 right_lines.append(line)
     except Exception:
         pass  # Never break the banner over an update check
