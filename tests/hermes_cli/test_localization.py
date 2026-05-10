@@ -30,6 +30,7 @@ def test_gateway_help_lines_are_localized(monkeypatch):
 
     assert any("Показать доступные команды" in line for line in lines)
     assert any("/help" in line and "Показать доступные команды" in line for line in lines)
+    assert any("библиотеки навыков" in line for line in lines)
     assert any("альтернативные имена" in line for line in lines)
 
 
@@ -56,7 +57,7 @@ def test_show_status_uses_russian_locale(monkeypatch, capsys, tmp_path):
     output = capsys.readouterr().out
     assert "Статус Hermes Agent" in output
     assert "Провайдеры API-ключей" in output
-    assert "Платформы сообщений" in output
+    assert "Платформы обмена сообщениями" in output
 
 
 def test_vercel_auth_is_localized(monkeypatch):

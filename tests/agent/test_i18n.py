@@ -13,9 +13,34 @@ from agent import i18n
 LOCALES_DIR = Path(__file__).resolve().parents[2] / "locales"
 
 
+class _UniqueKeyLoader(yaml.SafeLoader):
+    """SafeLoader variant that rejects duplicate mapping keys."""
+
+
+def _construct_unique_mapping(loader, node, deep=False):
+    mapping = {}
+    for key_node, value_node in node.value:
+        key = loader.construct_object(key_node, deep=deep)
+        if key in mapping:
+            raise AssertionError(f"duplicate key in {loader.name}: {key!r}")
+        mapping[key] = loader.construct_object(value_node, deep=deep)
+    return mapping
+
+
+_UniqueKeyLoader.add_constructor(
+    yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG,
+    _construct_unique_mapping,
+)
+
+
 def _load_raw(lang: str) -> dict:
     with (LOCALES_DIR / f"{lang}.yaml").open("r", encoding="utf-8") as f:
-        return yaml.safe_load(f)
+        loader = _UniqueKeyLoader(f)
+        loader.name = f.name
+        try:
+            return loader.get_single_data()
+        finally:
+            loader.dispose()
 
 
 def _flatten(d, prefix="") -> dict:
