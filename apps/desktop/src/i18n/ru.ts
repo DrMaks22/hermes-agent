@@ -2,6 +2,30 @@ import { FIELD_DESCRIPTIONS, FIELD_LABELS } from '@/app/settings/constants'
 
 import type { Translations } from './types'
 
+function pluralRu(count: number, one: string, few: string, many: string): string {
+  const value = Math.abs(count)
+  const mod10 = value % 10
+  const mod100 = value % 100
+
+  if (mod100 >= 11 && mod100 <= 14) {
+    return many
+  }
+
+  if (mod10 === 1) {
+    return one
+  }
+
+  if (mod10 >= 2 && mod10 <= 4) {
+    return few
+  }
+
+  return many
+}
+
+function countRu(count: number, one: string, few: string, many: string): string {
+  return `${count} ${pluralRu(count, one, few, many)}`
+}
+
 export const ru: Translations = {
   common: {
     apply: 'Применить',
@@ -90,7 +114,7 @@ export const ru: Translations = {
     region: 'Уведомления',
     hide: 'Скрыть',
     show: 'Показать',
-    more: count => `ещё ${count} ${count === 1 ? 'уведомление' : count < 5 ? 'уведомления' : 'уведомлений'}`,
+    more: count => `ещё ${countRu(count, 'уведомление', 'уведомления', 'уведомлений')}`,
     clearAll: 'Очистить все',
     dismiss: 'Закрыть уведомление',
     details: 'Подробности',
@@ -101,7 +125,7 @@ export const ru: Translations = {
       'Ваш бэкенд Hermes старше этой сборки рабочего стола и может работать некорректно. Обновите для согласования версий.',
     updateHermes: 'Обновить Hermes',
     updateReadyTitle: 'Обновление готово',
-    updateReadyMessage: count => `Доступно ${count} изменен${count === 1 ? 'ие' : count < 5 ? 'ия' : 'ий'}.`,
+    updateReadyMessage: count => `Доступно ${countRu(count, 'изменение', 'изменения', 'изменений')}.`,
     seeWhatsNew: 'Что нового',
     errors: {
       elevenLabsNeedsKey: 'Для ElevenLabs STT нужен ELEVENLABS_API_KEY.',
@@ -181,13 +205,13 @@ export const ru: Translations = {
       'session.prev': 'Предыдущая сессия',
       'session.focusSearch': 'Поиск по сессиям',
       'session.togglePin': 'Закрепить / открепить текущую сессию',
-      'composer.focus': 'Фокус на компоновщик',
+      'composer.focus': 'Фокус на редактор сообщения',
       'composer.modelPicker': 'Открыть выбор модели',
       'view.toggleSidebar': 'Переключить боковую панель сессий',
       'view.toggleRightSidebar': 'Переключить файловый браузер',
       'view.showFiles': 'Показать файловый браузер',
       'view.showTerminal': 'Показать терминал',
-      'view.terminalSelection': 'Отправить выделение терминала в компоновщик',
+      'view.terminalSelection': 'Отправить выделение терминала в редактор сообщения',
       'view.closePreviewTab': 'Закрыть вкладку предпросмотра',
       'view.flipPanes': 'Поменять местами стороны панели',
       'appearance.toggleMode': 'Переключить светлую / тёмную тему',
@@ -286,11 +310,11 @@ export const ru: Translations = {
       colorMode: 'Цветовой режим',
       colorModeDesc: 'Выберите фиксированный режим или позвольте Hermes следовать системным настройкам.',
       toolViewTitle: 'Отображение вызовов инструментов',
-      toolViewDesc: 'Продукт скрывает необработанные данные инструментов; Технический показывает полные входные/выходные данные.',
-      product: 'Продукт',
-      productDesc: 'Удобочитаемая активность инструментов с краткими сводками.',
+      toolViewDesc: 'В удобном режиме необработанные данные инструментов скрыты; технический режим показывает полный ввод и вывод.',
+      product: 'Удобный',
+      productDesc: 'Понятные сводки по действиям инструментов без лишних технических деталей.',
       technical: 'Технический',
-      technicalDesc: 'Включает необработанные аргументы/результаты инструментов и низкоуровневые детали.',
+      technicalDesc: 'Показывает необработанные аргументы, результаты и низкоуровневые детали.',
       themeTitle: 'Тема',
       themeDesc: 'Только палитры рабочего стола. Выбранный режим применяется поверх.'
     },
@@ -310,7 +334,7 @@ export const ru: Translations = {
       cantUpdate: 'Эта сборка не может обновиться изнутри приложения.',
       cantReach: 'Не удалось связаться с сервером обновлений.',
       tapCheck: 'Нажмите «Проверить сейчас», чтобы проверить наличие обновлений.',
-      updateReady: count => `Готово новое обновление (${count} изменен${count === 1 ? 'ие' : count < 5 ? 'ия' : 'ий'}).`,
+      updateReady: count => `Готово новое обновление (${countRu(count, 'изменение', 'изменения', 'изменений')}).`,
       lastChecked: age => `Последняя проверка: ${age}`,
       justNowSuffix: ' · только что',
       automaticUpdates: 'Автоматические обновления',
@@ -459,7 +483,7 @@ export const ru: Translations = {
     },
     model: {
       loading: 'Загрузка конфигурации модели…',
-      appliesDesc: 'Применяется к новым сессиям. Используйте выбор модели в компоновщике, чтобы переключить модель в активном чате.',
+      appliesDesc: 'Применяется к новым сессиям. Используйте выбор модели в редакторе сообщения, чтобы переключить модель в активном чате.',
       provider: 'Провайдер',
       model: 'Модель',
       applying: 'Применение…',
@@ -502,7 +526,7 @@ export const ru: Translations = {
       emptyArchivedDesc: 'Заархивируйте чат, чтобы скрыть его здесь.',
       unarchive: 'Разархивировать',
       deletePermanently: 'Удалить навсегда',
-      messages: count => `${count} сообщен${count === 1 ? 'ие' : count < 5 ? 'ия' : 'ий'}`,
+      messages: count => countRu(count, 'сообщение', 'сообщения', 'сообщений'),
       restored: 'Восстановлено',
       deleteConfirm: title => `Навсегда удалить «${title}»? Это нельзя отменить.`,
       defaultDirTitle: 'Папка проекта по умолчанию',
@@ -586,9 +610,9 @@ export const ru: Translations = {
   agents: {
     close: 'Закрыть агентов',
     title: 'Дерево запуска',
-    subtitle: 'Активность дочерних агентов в текущем ходе.',
-    emptyTitle: 'Нет активных дочерних агентов',
-    emptyDesc: 'Когда ход делегирует работу, дочерние агенты транслируют свой прогресс здесь.',
+    subtitle: 'Активность субагентов в текущем ходе.',
+    emptyTitle: 'Нет активных субагентов',
+    emptyDesc: 'Когда ход делегирует работу, субагенты показывают свой прогресс здесь.',
     running: 'Выполняется',
     failed: 'Ошибка',
     done: 'Готово',
@@ -598,11 +622,11 @@ export const ru: Translations = {
     delegation: index => `Делегирование ${index}`,
     workers: count => `${count} рабочих`,
     workersActive: count => `${count} активных`,
-    agentsCount: count => `${count} агент${count === 1 ? '' : count < 5 ? 'а' : 'ов'}`,
+    agentsCount: count => countRu(count, 'агент', 'агента', 'агентов'),
     activeCount: count => `${count} активных`,
     failedCount: count => `${count} с ошибкой`,
-    toolsCount: count => `${count} инструмент${count === 1 ? '' : count < 5 ? 'а' : 'ов'}`,
-    filesCount: count => `${count} файл${count === 1 ? '' : count < 5 ? 'а' : 'ов'}`,
+    toolsCount: count => countRu(count, 'инструмент', 'инструмента', 'инструментов'),
+    filesCount: count => countRu(count, 'файл', 'файла', 'файлов'),
     updatedAgo: age => `обновлено ${age}`,
     ageNow: 'сейчас',
     ageSeconds: seconds => `${seconds} сек. назад`,
@@ -825,7 +849,7 @@ export const ru: Translations = {
     close: 'Закрыть профили',
     nameHint: 'Строчные буквы, цифры, дефисы и подчёркивания. Должно начинаться с буквы или цифры.',
     title: 'Профили',
-    count: count => `${count} профил${count === 1 ? 'ь' : count < 5 ? 'я' : 'ей'}`,
+    count: count => countRu(count, 'профиль', 'профиля', 'профилей'),
     loading: 'Загрузка профилей…',
     newProfile: 'Новый профиль',
     allProfiles: 'Все профили',
@@ -842,7 +866,7 @@ export const ru: Translations = {
     refresh: 'Обновить профили',
     refreshing: 'Обновление профилей',
     default: 'по умолчанию',
-    skills: count => `${count} навык${count === 1 ? '' : count < 5 ? 'а' : 'ов'}`,
+    skills: count => countRu(count, 'навык', 'навыка', 'навыков'),
     env: 'окружение',
     defaultBadge: 'По умолчанию',
     rename: 'Переименовать',
@@ -851,9 +875,9 @@ export const ru: Translations = {
     modelLabel: 'Модель',
     skillsLabel: 'Навыки',
     notSet: 'Не задано',
-    soulDesc: 'Системный промпт и инструкции персонажа, встроенные в этот профиль.',
+    soulDesc: 'Системная инструкция и описание роли, встроенные в этот профиль.',
     soulOptional: 'необязательно',
-    soulPlaceholder: mode => `Системный промпт / персонаж для этого профиля.\nОставьте пустым, чтобы использовать ${mode} по умолчанию.`,
+    soulPlaceholder: mode => `Системная инструкция / роль для этого профиля.\nОставьте пустым, чтобы использовать ${mode} по умолчанию.`,
     soulPlaceholderCloned: 'клонированный',
     soulPlaceholderEmpty: 'пустой',
     unsavedChanges: 'Несохранённые изменения',
@@ -950,7 +974,7 @@ export const ru: Translations = {
     everyHourAt: minute => `Каждый час в :${minute}`,
     newCron: 'Новое задание cron',
     emptyDescNew:
-      'Запланируйте промпт для выполнения по выражению cron. Hermes запустит его и доставит результаты в указанное место.',
+      'Запланируйте запрос для выполнения по выражению cron. Hermes запустит его и доставит результат в указанное место.',
     emptyDescSearch: 'Попробуйте более широкий поисковый запрос.',
     emptyTitleNew: 'Нет запланированных заданий',
     emptyTitleSearch: 'Нет совпадений',
@@ -986,11 +1010,11 @@ export const ru: Translations = {
     failedSave: 'Не удалось сохранить задание cron',
     editTitle: 'Редактировать задание cron',
     createTitle: 'Новое задание cron',
-    editDesc: 'Обновите расписание, промпт или цель доставки. Изменения применятся при следующем запуске.',
-    createDesc: 'Запланируйте промпт для автоматического выполнения. Используйте синтаксис cron или фразу вроде «каждые 15 минут».',
+    editDesc: 'Обновите расписание, запрос или место доставки. Изменения применятся при следующем запуске.',
+    createDesc: 'Запланируйте автоматическое выполнение запроса. Используйте синтаксис cron или фразу вроде «каждые 15 минут».',
     nameLabel: 'Название',
     namePlaceholder: 'Утренняя сводка',
-    promptLabel: 'Промпт',
+    promptLabel: 'Запрос',
     promptPlaceholder: 'Подведи итог моих непрочитанных тем в Slack и отправь мне топ-5 по email...',
     frequencyLabel: 'Частота',
     deliverLabel: 'Доставить в',
@@ -998,7 +1022,7 @@ export const ru: Translations = {
     customPlaceholder: '0 9 * * * или будни в 9:00',
     customHint: 'Выражение cron или фразы вроде «каждый час» или «будни в 9:00».',
     optional: 'Необязательно',
-    promptScheduleRequired: 'Промпт и расписание обязательны.',
+    promptScheduleRequired: 'Запрос и расписание обязательны.',
     saveChanges: 'Сохранить изменения',
     createAction: 'Создать cron'
   },
@@ -1167,9 +1191,9 @@ export const ru: Translations = {
     queued: count => `${count} в очереди`,
     attachmentOnly: 'Ход только с вложением',
     emptyTurn: 'Пустой ход',
-    attachments: count => `${count} вложен${count === 1 ? 'ие' : count < 5 ? 'ия' : 'ий'}`,
-    editingInComposer: 'Редактирование в компоновщике',
-    editingQueuedInComposer: 'Редактирование хода из очереди в компоновщике',
+    attachments: count => countRu(count, 'вложение', 'вложения', 'вложений'),
+    editingInComposer: 'Редактирование в редакторе сообщения',
+    editingQueuedInComposer: 'Редактирование хода из очереди в редакторе сообщения',
     editQueued: 'Редактировать ход из очереди',
     sendQueuedNext: 'Отправить ход из очереди следующим',
     sendQueuedNow: 'Отправить ход из очереди сейчас',
@@ -1192,11 +1216,11 @@ export const ru: Translations = {
     images: 'Изображения…',
     pasteImage: 'Вставить изображение',
     url: 'URL…',
-    promptSnippets: 'Сниппеты промптов…',
+    promptSnippets: 'Шаблоны запросов…',
     tipPre: 'Совет: введите ',
     tipPost: ' для ссылки на файлы прямо в тексте.',
-    snippetsTitle: 'Сниппеты промптов',
-    snippetsDesc: 'Выберите начальный промпт, чтобы вставить в компоновщик.',
+    snippetsTitle: 'Шаблоны запросов',
+    snippetsDesc: 'Выберите начальный запрос, чтобы вставить его в редактор сообщения.',
     dropFiles: 'Перетащите файлы для прикрепления',
     dropSession: 'Перетащите, чтобы связать этот чат',
     snippets: {
@@ -1241,7 +1265,7 @@ export const ru: Translations = {
     availableBody: 'Новая версия Hermes готова к установке.',
     updateNow: 'Обновить сейчас',
     maybeLater: 'Может быть позже',
-    moreChanges: count => `+ ещё ${count} изменен${count === 1 ? 'ие' : count < 5 ? 'ия' : 'ий'}.`,
+    moreChanges: count => `+ ещё ${countRu(count, 'изменение', 'изменения', 'изменений')}.`,
     manualTitle: 'Обновление из терминала',
     manualBody: 'Вы установили Hermes из командной строки, поэтому обновления тоже запускаются оттуда. Вставьте это в терминал:',
     manualPickedUp: 'Hermes подхватит новую версию при следующем запуске.',
@@ -1284,7 +1308,7 @@ export const ru: Translations = {
     error: 'Ошибка',
     hideOutput: 'Скрыть вывод установщика',
     showOutput: 'Показать вывод установщика',
-    lines: count => `${count} строк${count === 1 ? 'а' : count < 5 ? 'и' : ''}`,
+    lines: count => countRu(count, 'строка', 'строки', 'строк'),
     noOutput: 'Вывода пока нет.',
     cancelling: 'Отмена...',
     cancelInstall: 'Отменить установку',
@@ -1436,7 +1460,7 @@ export const ru: Translations = {
       restart: 'перезапуск',
       update: 'обновление',
       updateInProgress: 'Обновление выполняется',
-      commitsBehind: (count, branch) => `${count} коммит${count === 1 ? '' : count < 5 ? 'а' : 'ов'} отстаёт от ${branch}`,
+      commitsBehind: (count, branch) => `Отстаёт от ${branch} на ${countRu(count, 'коммит', 'коммита', 'коммитов')}`,
       desktopVersion: version => `Hermes Desktop v${version}`,
       commit: sha => `коммит ${sha}`,
       branch: branch => `ветка ${branch}`,
@@ -1452,7 +1476,7 @@ export const ru: Translations = {
       agents: 'Агенты',
       closeAgents: 'Закрыть агентов',
       openAgents: 'Открыть агентов',
-      subagents: count => `${count} дочерн${count === 1 ? 'ий агент' : count < 5 ? 'их агента' : 'их агентов'}`,
+      subagents: count => countRu(count, 'субагент', 'субагента', 'субагентов'),
       failed: count => `${count} с ошибкой`,
       running: count => `${count} выполняется`,
       cron: 'Cron',
@@ -1511,7 +1535,7 @@ export const ru: Translations = {
     opening: 'Открытие...',
     hide: 'Скрыть',
     openPreview: 'Открыть предпросмотр',
-    sourceLineTitle: 'Нажмите для выбора · shift+клик для расширения · перетащите в компоновщик',
+    sourceLineTitle: 'Нажмите, чтобы выбрать · Shift+клик, чтобы расширить · перетащите в редактор сообщения',
     source: 'ИСТОЧНИК',
     renderedPreview: 'ПРЕДПРОСМОТР',
     unknownSize: 'неизвестный размер',
@@ -1529,7 +1553,7 @@ export const ru: Translations = {
       copyFailed: 'Не удалось скопировать вывод консоли',
       copyEntry: 'Копировать эту запись',
       sendEntry: 'Отправить эту запись в чат',
-      messages: count => `${count} сообщен${count === 1 ? 'ие' : count < 5 ? 'ия' : 'ий'} консоли`,
+      messages: count => `${countRu(count, 'сообщение', 'сообщения', 'сообщений')} консоли`,
       resize: 'Изменить размер консоли предпросмотра',
       title: 'Консоль предпросмотра',
       selected: count => `Выбрано: ${count}`,
@@ -1541,7 +1565,7 @@ export const ru: Translations = {
       empty: 'Сообщений консоли пока нет.',
       promptHeader: 'Консоль предпросмотра:',
       sentTitle: 'Отправлено в чат',
-      sentMessage: count => `${count} запис${count === 1 ? 'ь' : count < 5 ? 'и' : 'ей'} лога добавлено в компоновщик`
+      sentMessage: count => `Добавлено в редактор сообщения: ${countRu(count, 'запись лога', 'записи лога', 'записей лога')}`
     },
     web: {
       appFailedToBoot: 'Приложение предпросмотра не удалось запустить',
@@ -1672,7 +1696,7 @@ export const ru: Translations = {
     audioReadFailed: 'Не удалось прочитать записанное аудио',
     sessionUnavailable: 'Сессия недоступна',
     createSessionFailed: 'Не удалось создать новую сессию',
-    promptFailed: 'Не удалось выполнить промпт',
+    promptFailed: 'Не удалось выполнить запрос',
     providerCredentialRequired: 'Добавьте учётные данные провайдера перед отправкой первого сообщения.',
     emptySlashCommand: 'пустая слэш-команда',
     desktopCommands: 'Команды рабочего стола',
