@@ -1,0 +1,3 @@
+"NSAudioCaptureUsageDescription" = "Hermes использует захват аудио для голосовых диалогов.";
+"NSCameraUsageDescription" = "Hermes использует камеру, когда этого требует включённый вами плагин или функция.";
+"NSMicrophoneUsageDescription" = "Hermes использует микрофон для голосового ввода и голосовых диалогов.";
